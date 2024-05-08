@@ -3,7 +3,7 @@
 // Stack-based algorithm (Algorithm 4 in Bogdan et al. 2015)
 
 void
-prox_stack(arma::vec& x, const arma::vec& lambda)
+prox_stack(arma::vec& x, const arma::vec& lambda, bool nonneg)
 {
   using namespace arma;
 
@@ -32,16 +32,25 @@ prox_stack(arma::vec& x, const arma::vec& lambda)
     k++;
   }
 
-  for (uword j = 0; j < k; j++) {
-    double d = std::max(w(j), 0.0);
-    for (uword i = idx_i(j); i <= idx_j(j); i++) {
-      x(i) = d;
+  if (nonneg) {
+    for (uword j = 0; j < k; j++) {
+      double d = std::max(w(j), 0.0);
+      for (uword i = idx_i(j); i <= idx_j(j); i++) {
+        x(i) = d;
+      }
+    }
+  } else {
+    for (uword j = 0; j < k; j++) {
+      double d = w(j);
+      for (uword i = idx_i(j); i <= idx_j(j); i++) {
+        x(i) = d;
+      }
     }
   }
 }
 
 void
-prox_pava(arma::vec& y, const arma::vec& lambda)
+prox_pava(arma::vec& y, const arma::vec& lambda, bool nonneg)
 {
   using namespace arma;
 
@@ -76,13 +85,16 @@ prox_pava(arma::vec& y, const arma::vec& lambda)
 
   } while ((known = ip) < n);
 
-  y = clamp(y, 0.0, datum::inf);
+  if (nonneg) {
+    y = clamp(y, 0.0, datum::inf);
+  }
 }
 
 arma::mat
 prox(const arma::mat& beta,
      const arma::vec& lambda,
-     const ProxMethod prox_method)
+     const ProxMethod prox_method,
+     bool nonneg)
 {
   using namespace arma;
 
@@ -95,10 +107,10 @@ prox(const arma::mat& beta,
 
   switch (prox_method) {
     case ProxMethod::stack:
-      prox_stack(beta_vec, lambda);
+      prox_stack(beta_vec, lambda, nonneg);
       break;
     case ProxMethod::pava:
-      prox_pava(beta_vec, lambda);
+      prox_pava(beta_vec, lambda, nonneg);
       break;
   }
 
